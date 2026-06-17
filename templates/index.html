@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>پنل هوشمند مدیریت تصفیه آب صنعتی</title>
+    <!-- لود کردن فریم‌ورک محبوب Tailwind CSS برای زیبایی خیره‌کننده -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;700&display=swap');
+        body { font-family: 'Vazirmatn', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen">
+
+    <!-- هدر سایت همراه با لوگوی آب پاک سازان -->
+    <header class="bg-white border-b border-slate-200 py-4 shadow-sm">
+        <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <img src="https://abpaksazan.com/wp-content/uploads/2022/10/i-abpaksazan-logo-new1.png" alt="آب پاک سازان" class="h-12 w-auto object-contain">
+                <div>
+                    <h1 class="text-lg font-bold text-slate-900">سامانه هوشمند زمان‌بندی و یادآور SMS</h1>
+                    <p class="text-xs text-blue-600 font-medium">پشتیبانی و نگهداری دستگاه‌های تصفیه آب صنعتی</p>
+                </div>
+            </div>
+            <div class="bg-blue-50 text-blue-700 px-4 py-1.5 rounded-full text-xs font-bold border border-blue-100 shadow-sm">
+                ⏱️ سیستم تمدید خودکار دوره‌ای فعال است
+            </div>
+        </div>
+    </header>
+
+    <!-- محتوای اصلی پنل -->
+    <main class="max-w-6xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <!-- بخش فرم ثبت نام (سمت راست) -->
+        <section class="lg:col-span-1">
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm sticky top-6">
+                <div class="flex items-center gap-2 mb-4 pb-3 border-b border-slate-100">
+                    <span class="text-xl">➕</span>
+                    <h2 class="text-base font-bold text-slate-800">ثبت دستگاه و مشتری جدید</h2>
+                </div>
+                
+                <form id="deviceForm" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">نام مشتری / کارخانه</label>
+                        <input type="text" id="name" required placeholder="مثال: داروسازی دکتر عبیدی" class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">شماره تلفن همراه (جهت ارسال SMS)</label>
+                        <input type="tel" id="phoneNumber" required placeholder="09123456789" class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition text-left" dir="ltr">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">تاریخ مبدا/امروز (فرمت میلادی YYYY-MM-DD)</label>
+                        <input type="text" id="baseDate" required class="w-full border border-slate-200 bg-slate-50 text-slate-500 rounded-xl px-3 py-2.5 text-sm focus:outline-none text-left" dir="ltr">
+                        <p class="text-[10px] text-slate-400 mt-1">سیستم به صورت خودکار تاریخ‌های شمسی بعدی را محاسبه می‌کند.</p>
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl text-sm shadow-md shadow-blue-100 transition-all transform active:scale-[0.98]">
+                        ذخیره دستگاه و شروع زمان‌بندی
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- بخش نمایش لیست دستگاه‌ها (سمت چپ) -->
+        <section class="lg:col-span-2">
+            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm min-h-[400px]">
+                <div class="flex justify-between items-center mb-6 pb-3 border-b border-slate-100">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xl">🖥️</span>
+                        <h2 class="text-base font-bold text-slate-800">دستگاه‌های فعال و وضعیت سرویس‌ها</h2>
+                    </div>
+                    <button onclick="fetchDevices()" class="text-xs text-slate-500 hover:text-blue-600 transition flex items-center gap-1">
+                        🔄 به‌روزرسانی لیست
+                    </button>
+                </div>
+
+                <!-- وضعیت در حال بارگذاری -->
+                <div id="deviceList" class="space-y-4">
+                    <div class="flex flex-col items-center justify-center py-12 text-slate-400">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-3"></div>
+                        <p class="text-sm">در حال دریافت اطلاعات از دیتابیس...</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        // مبدل فوق‌العاده سبک و آفلاین میلادی به شمسی بدون نیاز به پکیج خارجی
+        function getGregorianToJalali(isoString) {
+            if (!isoString) return "---";
+            const date = new Date(isoString);
+            const gy = date.getFullYear();
+            const gm = date.getMonth() + 1;
+            const gd = date.getDate();
+
+            const gDaysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+            const jDaysInMonth = [31, 31, 31, 31, 31, 31, 30, 30, 30, 30, 30, 29];
+
+            if ((gy % 4 == 0 && gy % 100 != 0) || (gy % 400 == 0)) gDaysInMonth[1] = 29;
+
+            let gy2 = (gm > 2) ? (gy - 1600) : (gy - 1601);
+            let gm2 = (gm > 2) ? (gm - 3) : (gm + 9);
+            let gDayNo = 365 * gy2 + Math.floor((gy2 + 3) / 4) - Math.floor((gy2 + 99) / 100) + Math.floor((gy2 + 399) / 400) + 60 + gd;
+            for (let i = 0; i < gm2; ++i) gDayNo += gDaysInMonth[(i + 2) % 12];
+
+            let jNp = Math.floor(gDayNo / 12053);
+            gDayNo %= 12053;
+            let jy = 979 + 33 * jNp + 4 * Math.floor(gDayNo / 1461);
+            gDayNo %= 1461;
+
+            if (gDayNo >= 366) {
+                jy += Math.floor((gDayNo - 1) / 365);
+                gDayNo = (gDayNo - 1) % 365;
+            }
+
+            let jm = 0;
+            for (let i = 0; i < 11; ++i) {
+                if (gDayNo < jDaysInMonth[i]) {
+                    jm = i + 1;
+                    break;
+                }
+                gDayNo -= jDaysInMonth[i];
+            }
+            if (jm == 0) jm = 12;
+            let jd = gDayNo + 1;
+
+            return `${jy}/${String(jm).padStart(2, '0')}/${String(jd).padStart(2, '0')}`;
+        }
+
+        // دریافت دستگاه‌ها از سرور و تزریق به جدول با استایل زیبا
+        async function fetchDevices() {
+            try {
+                const res = await fetch('/api/devices');
+                const devices = await res.json();
+                const listDiv = document.getElementById('deviceList');
+                
+                listDiv.innerHTML = '';
+
+                if (devices.length === 0) {
+                    listDiv.innerHTML = `
+                        <div class="text-center py-16 border-2 border-dashed border-slate-200 rounded-xl">
+                            <span class="text-4xl block mb-2">📭</span>
+                            <p class="text-slate-400 text-sm">هنوز هیچ دستگاهی در سامانه ثبت نشده است.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                devices.forEach(d => {
+                    const card = document.createElement('div');
+                    card.className = "p-5 border border-slate-200 rounded-xl bg-slate-50/50 hover:bg-slate-50 transition-all shadow-sm flex flex-col gap-4";
+                    
+                    card.innerHTML = `
+                        <div class="flex flex-col sm:flex-row justify-between sm:items-center border-b border-slate-200 pb-3 gap-2">
+                            <div>
+                                <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span> ${d.name}
+                                </h3>
+                                <p class="text-xs text-slate-500 mt-1 flex items-center gap-1">📞 شماره تماس مشتری: <span class="font-bold text-slate-700" dir="ltr">${d.phone_number}</span></p>
+                            </div>
+                            <span class="text-[10px] bg-slate-200/70 text-slate-600 font-bold px-2 py-1 rounded-md self-start sm:self-auto">شناسه دیتابیس: #${d.id}</span>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <!-- بخش آنتی اسکالنت -->
+                            <div class="bg-amber-50/60 p-3 rounded-xl border border-amber-100 flex flex-col justify-between gap-3">
+                                <div>
+                                    <span class="block text-[11px] font-bold text-amber-800 mb-1">💧 زمان تزریق آنتی‌اسکالنت</span>
+                                    <span class="font-bold text-slate-700 text-sm">${getGregorianToJalali(d.antiscalant_date)}</span>
+                                </div>
+                                <button onclick="completeTask(${d.id}, 'antiscalant')" class="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold py-2 px-3 rounded-lg w-full shadow-sm transition active:scale-95">
+                                    ✓ انجام شد (تمدید ۱ روز)
+                                </button>
+                            </div>
+
+                            <!-- بخش بک واش -->
+                            <div class="bg-blue-50/60 p-3 rounded-xl border border-blue-100 flex flex-col justify-between gap-3">
+                                <div>
+                                    <span class="block text-[11px] font-bold text-blue-800 mb-1">🔄 زمان انجام بک‌واش</span>
+                                    <span class="font-bold text-slate-700 text-sm">${getGregorianToJalali(d.backwash_date)}</span>
+                                </div>
+                                <button onclick="completeTask(${d.id}, 'backwash')" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 px-3 rounded-lg w-full shadow-sm transition active:scale-95">
+                                    ✓ انجام شد (تمدید ۲ روز)
+                                </button>
+                            </div>
+
+                            <!-- بخش فیلتر کارتریج -->
+                            <div class="bg-purple-50/60 p-3 rounded-xl border border-purple-100 flex flex-col justify-between gap-3">
+                                <div>
+                                    <span class="block text-[11px] font-bold text-purple-800 mb-1">⚙️ تعویض فیلتر کارتریج</span>
+                                    <span class="font-bold text-slate-700 text-sm">${getGregorianToJalali(d.cartridge_filter_date)}</span>
+                                </div>
+                                <button onclick="completeTask(${d.id}, 'cartridge')" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold py-2 px-3 rounded-lg w-full shadow-sm transition active:scale-95">
+                                    ✓ انجام شد (تمدید ۱ ماه)
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    listDiv.appendChild(card);
+                });
+            } catch (err) {
+                document.getElementById('deviceList').innerHTML = `
+                    <div class="text-center py-12 text-rose-500">
+                        <p class="text-sm font-bold">❌ خطا در ارتباط با سرور بک‌آند وجود دارد.</p>
+                    </div>
+                `;
+            }
+        }
+
+        // زدن تیک کار و رفرش شدن لحظه‌ای داده‌ها
+        async function completeTask(id, taskType) {
+            const res = await fetch(`/api/devices/${id}/complete?task=${taskType}`, { method: 'PUT' });
+            if (res.ok) {
+                fetchDevices();
+            } else {
+                alert('خطا در تمدید تاریخ در سرور!');
+            }
+        }
+
+        // سابمیت فرم بدون رفرش کل صفحه
+        document.getElementById('deviceForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const baseDateStr = document.getElementById('baseDate').value;
+            const baseDate = new Date(baseDateStr);
+
+            if (isNaN(baseDate.getTime())) {
+                alert('فرمت تاریخ درست نیست!');
+                return;
+            }
+
+            // فرمول زمان‌بندی دقیق
+            const antiDate = new Date(baseDate); antiDate.setDate(baseDate.getDate() + 1);
+            const backDate = new Date(baseDate); backDate.setDate(baseDate.getDate() + 2);
+            const cartDate = new Date(baseDate); cartDate.setMonth(baseDate.getMonth() + 1);
+
+            const formatFix = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+            const data = {
+                name: document.getElementById('name').value,
+                phone_number: document.getElementById('phoneNumber').value,
+                antiscalant_date: formatFix(antiDate),
+                backwash_date: formatFix(backDate),
+                cartridge_filter_date: formatFix(cartDate)
+            };
+
+            const res = await fetch('/api/devices', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            if (res.ok) {
+                document.getElementById('name').value = '';
+                document.getElementById('phoneNumber').value = '';
+                fetchDevices();
+            } else {
+                alert('خطا در ذخیره‌سازی اطلاعات روی سرور!');
+            }
+        });
+
+        // قرار دادن تاریخ جاری سیستم در فیلد به صورت خودکار
+        document.getElementById('baseDate').value = new Date().toISOString().split('T')[0];
+
+        // لود کردن اولین باره داده‌ها به محض باز شدن برنامه
+        fetchDevices();
+    </script>
+</body>
+</html>
